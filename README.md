@@ -10,5 +10,5 @@ Our app addresses this by providing a simple, user-friendly platform that helps 
 -Python: For backend or data processing tasks.
 -Firebase: For our database.
 
-Launching Instructions
-Add instructions here for how to run and launch the app on local machines, including dependencies and setup.
+3.Launching Instructions
+open the excutavle file provided in the submission folder in any android device or bluestacks or android emulator.

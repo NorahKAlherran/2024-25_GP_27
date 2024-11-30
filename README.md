@@ -9,7 +9,9 @@ Our app addresses this by providing a simple, user-friendly platform that helps 
 2.Technology 
 
 -Flutter: For building the mobile application across Android.
+
 -Python: For backend or data processing tasks.
+
 -Firebase: For our database.
 
 3.Launching Instructions

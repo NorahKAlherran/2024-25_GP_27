@@ -1,10 +1,14 @@
 # 2024-25_GP_27
 QOOT
-Introduction 
-As people become more health-conscious, there is a growing shift towards home-cooked meals over takeout. However, many struggle to maintain this habit due to the challenges of finding recipes that match available ingredients, leading to food waste and frustration. Our mobile application aims to solve this by offering users a simple way to find recipes based on what they have, plan meals in advance, and manage ingredients efficiently. By making home cooking easier and more accessible, the app supports healthier lifestyles, reduces waste, and saves time.
 
-technology
-Flatter
-Python
+1.Introduction
+As people become more health-conscious, there is a growing trend towards home-cooked meals over takeout. Despite this, many still struggle to find recipes that match the ingredients they have, leading to food waste and frustration. 
+Our app addresses this by providing a simple, user-friendly platform that helps users find recipes based on available ingredients. It promotes healthier eating, reduces food waste, and saves time. It’s designed to simplify the cooking process and make home cooking more accessible, saving users time, money, and effort while supporting healthier lifestyles.
 
-launching instructions
+2.Technology 
+-Flutter: For building the mobile application across Android.
+-Python: For backend or data processing tasks.
+-Firebase: For our database.
+
+Launching Instructions
+Add instructions here for how to run and launch the app on local machines, including dependencies and setup.

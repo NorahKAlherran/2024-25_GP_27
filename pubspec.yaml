@@ -1,0 +1,57 @@
+name: flutternew
+description: "A new Flutter project."
+
+publish_to: 'none' 
+
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^3.6.0
+  cloud_firestore: ^5.5.0
+  firebase_auth: ^5.3.1
+  firebase_storage: ^12.3.3
+  share_plus: ^7.2.2
+  image_picker: ^1.1.2
+  intl: ^0.17.0
+  cached_network_image: ^3.2.3
+
+dev_dependencies:
+
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+
+
+flutter:
+  assets:
+    - assets/images/qootlogo.png
+    - assets/images/chiefphoto.png
+    - assets/images/ingrediants.png
+    - assets/images/profile.png
+    - assets/images/calendar.png
+    - assets/images/home-button.png
+    - assets/images/Flipsnack.jpeg
+    - assets/images/plus.png
+  
+  fonts:
+    - family: TimesNewRoman
+      fonts:
+        - asset: assets/fonts/TimesNewRoman.ttf
+    - family: Gabriola
+      fonts:
+        - asset: assets/fonts/Gabriola.ttf
+  uses-material-design: true
+
+
+   
+
+ 

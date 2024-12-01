@@ -16,4 +16,4 @@ Our app addresses this by providing a simple, user-friendly platform that helps 
 
 3.Launching Instructions
 
-Open the excutavle file provided in the submission folder in any android device or bluestacks or android emulator.
+Open the excutavle file (app-release.apk) provided in the submission folder in any android device or bluestacks or android emulator.

@@ -926,8 +926,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
                                             Icon(
                                               Icons.search_off,
                                               size: 60,
-                                              color: Colors.grey[
-                                                  600], // Subtle grey color for the icon
+                                              color: Colors.grey[600],
                                             ),
                                             SizedBox(height: 16),
                                             Text(
@@ -935,8 +934,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
                                               style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.bold,
-                                                color: Colors.grey[
-                                                    800], // Darker text color for visibility
+                                                color: Colors.grey[800],
                                               ),
                                             ),
                                             SizedBox(height: 8),
@@ -945,8 +943,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 16,
-                                                color: Colors.grey[
-                                                    700], // Medium grey for the description
+                                                color: Colors.grey[700],
                                               ),
                                             ),
                                             SizedBox(height: 16),
@@ -1029,14 +1026,14 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
             placeholder: (context, url) => Container(
               width: 50,
               height: 50,
-              color: Colors.grey[300], // Grey background
-              child: Icon(Icons.image, color: Colors.grey), // Placeholder icon
+              color: Colors.grey[300],
+              child: Icon(Icons.image, color: Colors.grey),
             ),
             errorWidget: (context, url, error) => Container(
               width: 50,
               height: 50,
-              color: Colors.grey[300], // Grey background
-              child: Icon(Icons.broken_image, color: Colors.grey), // Error icon
+              color: Colors.grey[300],
+              child: Icon(Icons.broken_image, color: Colors.grey),
             ),
           ),
           title: Text(recipe['name'] ?? 'Unknown'),

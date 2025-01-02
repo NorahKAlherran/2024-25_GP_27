@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutternew/login.dart';
 import 'main.dart';
 import 'MyRecipesPage.dart';
 import 'UserCollections.dart';
@@ -312,6 +313,11 @@ class _ProfilePageState extends State<ProfilePage> {
           password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
     }
 
+    bool _isCurrentPasswordObscured =
+        true; // To manage current password visibility
+    bool _isNewPasswordObscured = true; // To manage new password visibility
+    bool _isConfirmPasswordObscured =
+        true; // To manage confirm password visibility
     showDialog(
       context: context,
       builder: (context) {
@@ -327,6 +333,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    ////////////////////////////////////////////////
                     Text(
                       'Change Password',
                       style: TextStyle(
@@ -336,19 +343,35 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     SizedBox(height: 15),
+                    ////////////////////////////////////////////////
                     TextField(
                       controller: _currentPasswordController,
                       focusNode: _currentPasswordFocus,
-                      obscureText: true,
+                      obscureText: _isCurrentPasswordObscured,
                       decoration: InputDecoration(
                         labelText: 'Current Password',
                         filled: true,
                         fillColor: Colors.grey.shade100,
-                        errorText: isNewPasswordTouched ||
+                        errorText: isNewPasswordTouched &&
+                                    _currentPasswordController.text.isEmpty ||
                                 isConfirmPasswordTouched &&
                                     _currentPasswordController.text.isEmpty
                             ? 'This field cannot be empty'
                             : null,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isCurrentPasswordObscured
+                                ? Icons.visibility_off // Eye icon with a slash
+                                : Icons.visibility, // Regular eye icon
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isCurrentPasswordObscured =
+                                  !_isCurrentPasswordObscured;
+                            });
+                          },
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -363,11 +386,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         }
                       },
                     ),
+                    /////////////////////////////////////////////////////////
                     SizedBox(height: 15),
                     TextField(
                       controller: _newPasswordController,
                       focusNode: _newPasswordFocus,
-                      obscureText: true,
+                      obscureText: _isNewPasswordObscured,
                       decoration: InputDecoration(
                         labelText: 'New Password',
                         filled: true,
@@ -376,6 +400,20 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _newPasswordController.text.isEmpty
                             ? 'This field cannot be empty'
                             : null,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isNewPasswordObscured
+                                ? Icons.visibility_off // Eye icon with a slash
+                                : Icons.visibility, // Regular eye icon
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isNewPasswordObscured =
+                                  !_isNewPasswordObscured; // Toggle visibility
+                            });
+                          },
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -449,23 +487,36 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ],
                     ),
+                    ////////////////////////////////////////////////
                     SizedBox(height: 15),
                     TextField(
                       controller: _confirmPasswordController,
                       focusNode: _confirmPasswordFocus,
-                      obscureText: true,
+                      obscureText: _isConfirmPasswordObscured,
                       decoration: InputDecoration(
                         labelText: 'Confirm New Password',
                         filled: true,
                         fillColor: Colors.grey.shade100,
-                        errorText: isConfirmPasswordTouched &&
-                                (_confirmPasswordController.text.isEmpty ||
-                                    _newPasswordController.text.trim() !=
-                                        _confirmPasswordController.text.trim())
+                        errorText: (_newPasswordController.text.trim() !=
+                                _confirmPasswordController.text.trim())
                             ? _confirmPasswordController.text.isEmpty
                                 ? 'This field cannot be empty'
                                 : 'Passwords do not match'
                             : null,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isConfirmPasswordObscured
+                                ? Icons.visibility_off // Eye icon with a slash
+                                : Icons.visibility, // Regular eye icon
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmPasswordObscured =
+                                  !_isConfirmPasswordObscured; // Toggle visibility
+                            });
+                          },
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -519,14 +570,26 @@ class _ProfilePageState extends State<ProfilePage> {
                               await user.updatePassword(
                                   _newPasswordController.text.trim());
 
-                              Navigator.of(context).pop(); // Close dialog
+                              // Log out the user
+                              await _auth.signOut();
 
+                              Navigator.of(context)
+                                  .pop(); // Close the change password dialog
+
+                              // Redirect to login screen
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        LoginScreen()), // Replace with your login screen
+                              );
+
+                              // Optionally, show success message (if needed)
                               showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
                                   title: Text('Success'),
                                   content: Text(
-                                      'Password has been successfully changed!'),
+                                      'Password has been successfully changed! You have been logged out.'),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
@@ -545,7 +608,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: Text('Error!'),
-                                content: Text('Failed to change password.'),
+                                content:
+                                    Text('The current password is incorrect.'),
                                 actions: [
                                   TextButton(
                                     onPressed: () =>

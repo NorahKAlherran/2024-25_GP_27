@@ -67,7 +67,11 @@ class _MyRecipesPageState extends State<MyRecipesPage> {
               final recipeName = recipe['name'] ?? 'Unnamed Recipe';
               final recipeDescription =
                   recipe['description'] ?? 'No Description';
-              final recipeImage = recipe['image'] ?? '';
+              final recipeImage = recipe['image'] != null &&
+                      recipe['image'].isNotEmpty
+                  ? recipe['image'][0] // Get the first image URL from the list
+                  : '';
+
               final isPublic = recipe['source'] == 'public';
 
               return Card(

@@ -48,14 +48,21 @@ class RecipeDetailPageUser extends StatefulWidget {
       {super.key, required this.recipeId, required this.username});
 
   @override
-  _RecipeDetailPageUserState createState() =>
-      _RecipeDetailPageUserState(); // Corrected here
+  _RecipeDetailPageUserState createState() => _RecipeDetailPageUserState();
 }
 
 class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
   bool _isFavorite = false;
   double _fontSize = 16.0;
   Future<DocumentSnapshot>? _recipeFuture;
+// Define a PageController for controlling the PageView
+  final PageController _pageController = PageController(initialPage: 1000);
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -151,12 +158,31 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
       final collectionRef = FirebaseFirestore.instance
           .collection('collections')
           .doc(collectionId);
+      // Fetch the recipe from users_recipes to get the image URL
+      final recipeDoc = await FirebaseFirestore.instance
+          .collection('users_recipes')
+          .doc(recipeId)
+          .get();
+      if (!recipeDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Recipe not found!')),
+        );
+        return;
+      }
+
+      final recipeData = recipeDoc.data() as Map<String, dynamic>;
+
+      // Extract image URL (use the first image if there are multiple)
+      final List<dynamic>? imageList = recipeData['image'];
+      final String recipeImageUrl =
+          (imageList != null && imageList.isNotEmpty) ? imageList[0] : '';
+
       await collectionRef.update({
         'recipes': FieldValue.arrayUnion([
           {
             'id': recipeId,
             'name': recipeName,
-            'image': recipeImage,
+            'image': recipeImageUrl,
           }
         ]),
       });
@@ -409,7 +435,11 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
 
             final data = snapshot.data!.data() as Map<String, dynamic>;
             final String name = data['name'] ?? 'Unnamed Recipe';
-            final String image = data['image'] ?? '';
+            final List<String> images =
+                data['image'] != null && data['image'] is List
+                    ? List<String>.from(data['image'])
+                    : [];
+
             final String description = data['description'] ?? 'No description';
             final String difficulty =
                 data['difficulty'] ?? 'Unknown Difficulty';
@@ -439,24 +469,93 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Recipe image
+                    // Recipe image carousel using PageView
+                    // Recipe image carousel using PageView
                     Container(
                       height: 250,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        image: image.isNotEmpty
-                            ? DecorationImage(
-                                image: NetworkImage(image),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                        color: Colors.grey[300],
+                      child: Stack(
+                        children: [
+                          PageView.builder(
+                            controller: _pageController,
+                            itemCount: null, // Infinite scrolling
+                            itemBuilder: (context, index) {
+                              final actualIndex =
+                                  index % images.length; // Loop through images
+                              return Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  image: DecorationImage(
+                                    image: NetworkImage(images[actualIndex]),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          if (images.length >
+                              1) // Only show arrows if there is more than 1 image
+                            Positioned(
+                              left: 8.0,
+                              top: 0.0,
+                              bottom: 0.0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  _pageController.previousPage(
+                                    duration: Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withOpacity(
+                                        0.8), // Dark background for bold effect
+                                  ),
+                                  padding: const EdgeInsets.all(
+                                      8.0), // Padding to emphasize the arrow
+                                  child: Icon(
+                                    Icons.arrow_back_ios,
+                                    size: 24.0, // Larger size for boldness
+                                    color:
+                                        Colors.white, // White for high contrast
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (images.length >
+                              1) // Only show arrows if there is more than 1 image
+                            Positioned(
+                              right: 8.0,
+                              top: 0.0,
+                              bottom: 0.0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  _pageController.nextPage(
+                                    duration: Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withOpacity(
+                                        0.8), // Background for bold effect
+                                  ),
+                                  padding: const EdgeInsets.all(
+                                      8.0), // Padding to enlarge the icon
+                                  child: Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 24.0, // Larger size for boldness
+                                    color: Colors
+                                        .white, // Contrasting color for visibility
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      child: image.isEmpty
-                          ? const Icon(Icons.image,
-                              size: 100, color: Colors.grey)
-                          : null,
                     ),
+
                     const SizedBox(height: 20),
 
                     Column(
@@ -470,7 +569,7 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 5), // Spacing
+                        const SizedBox(height: 5),
                         Text(
                           difficulty, // Display difficulty
                           style: TextStyle(
@@ -487,8 +586,7 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Column(
-                          mainAxisAlignment: MainAxisAlignment
-                              .center, // Optional: Centers the content vertically
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(
                               icon: Icon(Icons.compare_arrows),
@@ -503,8 +601,7 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                                   style: TextStyle(
                                     fontSize: 12.0,
                                     fontWeight: FontWeight.bold,
-                                    color: Color.fromRGBO(88, 126, 75,
-                                        1), // Match the icon's color
+                                    color: Color.fromRGBO(88, 126, 75, 1),
                                   ),
                                 ),
                                 Text(
@@ -512,8 +609,7 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                                   style: TextStyle(
                                     fontSize: 12.0,
                                     fontWeight: FontWeight.bold,
-                                    color: Color.fromRGBO(88, 126, 75,
-                                        1), // Same color for consistency
+                                    color: Color.fromRGBO(88, 126, 75, 1),
                                   ),
                                 ),
                               ],
@@ -526,19 +622,16 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                                 .min, // This ensures the column takes up minimal space
                             children: [
                               Icon(
-                                Icons.translate, // The icon
-                                size: 36.0, // Icon size
-                                color: Color.fromRGBO(
-                                    88, 126, 75, 1), // Icon color
+                                Icons.translate,
+                                size: 36.0,
+                                color: Color.fromRGBO(88, 126, 75, 1),
                               ),
                               Text(
-                                'Translation', // The word above the icon
+                                'Translation',
                                 style: TextStyle(
                                   fontSize: 12.0,
-                                  fontWeight: FontWeight
-                                      .bold, // Adjust the font size as needed
-                                  color: Color.fromRGBO(88, 126, 75,
-                                      1), // Adjust the color as needed
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromRGBO(88, 126, 75, 1),
                                 ),
                               ),
                             ],
@@ -547,33 +640,36 @@ class _RecipeDetailPageUserState extends State<RecipeDetailPageUser> {
                         ),
                         IconButton(
                           icon: Column(
-                            mainAxisSize: MainAxisSize
-                                .min, // Ensure the column takes minimal space
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 _isFavorite
                                     ? Icons.favorite
                                     : Icons.favorite_border,
-                                size: 40, // Icon size
-                                color: Colors.red, // Icon color
+                                size: 40,
+                                color: Colors.red,
                               ),
                               Text(
-                                _isFavorite
-                                    ? 'Favorite'
-                                    : 'Collection', // The text below the icon
+                                _isFavorite ? 'Favorite' : 'Collection',
                                 style: TextStyle(
                                   fontSize: 12.0,
                                   fontWeight: FontWeight.bold,
-                                  // Adjust the font size as needed
-                                  color: Colors.red, // Text color
+                                  color: Colors.red,
                                 ),
                               ),
                             ],
                           ),
                           onPressed: () {
+                            // Use the first image from the images list (if it exists)
+                            String firstImage =
+                                images.isNotEmpty ? images[0] : '';
+
                             if (!_isFavorite) {
-                              _addToCollection(widget.recipeId, name, image);
+                              // Add to collection with the first image
+                              _addToCollection(
+                                  widget.recipeId, name, firstImage);
                             } else {
+                              // Remove from collection
                               _removeFromCollection();
                             }
                           },

@@ -146,10 +146,11 @@ class Recipe {
 
   factory Recipe.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final List<dynamic> imageList = data['image'] ?? [];
     return Recipe(
       id: doc.id,
       name: data['name'] ?? 'Unknown Recipe',
-      image: data['image'] ?? '',
+      image: imageList.isNotEmpty ? imageList[0] : '',
       createdBy: data['createdBy'] ?? 'Unknown',
     );
   }

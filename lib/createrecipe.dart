@@ -21,7 +21,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
   final GlobalKey<FormFieldState> _ingredientsKey = GlobalKey<FormFieldState>();
   final GlobalKey<FormFieldState> _instructionsKey =
       GlobalKey<FormFieldState>();
-
+  final List<File> _selectedImages = []; // List to store multiple images
   String _recipeName = '';
   String _description = '';
   String _ingredients = '';
@@ -64,7 +64,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
     });
   }
 
-  // Function to pick image from gallery
+// Function to pick image from gallery
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? pickedFile =
@@ -72,12 +72,19 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
 
     if (pickedFile != null) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _selectedImages.add(File(pickedFile.path)); // Add image to the list
       });
     }
   }
 
-  // Function to upload image to Firebase Storage
+  // Method to remove an image
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
+  // Function to upload a single image to Firebase Storage
   Future<String?> _uploadImage(File image) async {
     try {
       String fileExtension = image.path.split('.').last;
@@ -92,245 +99,278 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
     }
   }
 
+  // Function to upload all selected images to Firebase Storage
+  Future<List<String>> _uploadImages() async {
+    List<String> downloadUrls = []; // List to store URLs of the uploaded images
+    for (var image in _selectedImages) {
+      String? downloadUrl =
+          await _uploadImage(image); // Upload each image and get its URL
+      if (downloadUrl != null) {
+        downloadUrls.add(downloadUrl); // Add the URL to the list
+      }
+    }
+    return downloadUrls; // Return the list of URLs
+  }
+
   // Function to show preview dialog before submission
   void _showPreviewDialog() {
     String cookingTime = "${_hours}h ${_minutes}m ${_seconds}s";
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Preview Your Recipe',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color.fromRGBO(88, 126, 75, 1),
-            ),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
           ),
-          content: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Name
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Name: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _recipeName,
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                // Description
-                if (_description.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'Description: $_description',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                    ),
-                  ),
-                const Divider(color: Colors.grey),
-                // Cooking Time
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Cooking Time: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        cookingTime,
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: Colors.grey),
-                // Ingredients
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Ingredients:',
+                    'Preview Your Recipe',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Color.fromRGBO(88, 126, 75, 1),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _ingredients
-                        .replaceAll('[', '')
-                        .replaceAll(']', '')
-                        .split(',')
-                        .map((ingredient) => Text(
-                              '- ${ingredient.trim()}',
-                              style: const TextStyle(
-                                  fontSize: 16, color: Colors.black54),
-                            ))
-                        .toList(),
                   ),
                 ),
                 const Divider(color: Colors.grey),
-                // Instructions
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    'Steps:',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _instructions
-                        .replaceAll('[', '')
-                        .replaceAll(']', '')
-                        .replaceAll('"', '')
-                        .split(',')
-                        .asMap()
-                        .entries
-                        .map((entry) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Text(
-                                'Step ${entry.key + 1}: ${entry.value.trim()}',
+
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Name
+                          Row(
+                            children: [
+                              const Text(
+                                'Name: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  _recipeName,
+                                  style: const TextStyle(
+                                      fontSize: 16, color: Colors.black54),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Description
+                          if (_description.isNotEmpty)
+                            Text(
+                              'Description: $_description',
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.grey[700]),
+                            ),
+                          const Divider(color: Colors.grey),
+
+                          // Cooking Time
+                          Row(
+                            children: [
+                              const Text(
+                                'Cooking Time: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                cookingTime,
                                 style: const TextStyle(
                                     fontSize: 16, color: Colors.black54),
                               ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                const Divider(color: Colors.grey),
-                // Difficulty
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Difficulty: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _difficulty,
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: Colors.grey),
-                // Privacy Settings
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Privacy: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _isPrivate ? 'Private' : 'Public',
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                // Photo
-                if (_imageFile != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10.0),
-                        child: Text(
-                          'Photo:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            ],
                           ),
+                          const Divider(color: Colors.grey),
+
+                          // Ingredients
+                          const Text(
+                            'Ingredients:',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          ..._ingredients
+                              .replaceAll('[', '')
+                              .replaceAll(']', '')
+                              .split(',')
+                              .map((ingredient) => Text(
+                                    '- ${ingredient.trim()}',
+                                    style: const TextStyle(
+                                        fontSize: 16, color: Colors.black54),
+                                  )),
+                          const Divider(color: Colors.grey),
+
+                          // Steps
+                          const Text(
+                            'Steps:',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          ..._instructions
+                              .replaceAll('[', '')
+                              .replaceAll(']', '')
+                              .replaceAll('"', '')
+                              .split(',')
+                              .asMap()
+                              .entries
+                              .map((entry) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4.0),
+                                    child: Text(
+                                      'Step ${entry.key + 1}: ${entry.value.trim()}',
+                                      style: const TextStyle(
+                                          fontSize: 16, color: Colors.black54),
+                                    ),
+                                  )),
+                          const Divider(color: Colors.grey),
+
+                          // Difficulty
+                          Row(
+                            children: [
+                              const Text(
+                                'Difficulty: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                _difficulty,
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                          const Divider(color: Colors.grey),
+
+                          // Privacy
+                          Row(
+                            children: [
+                              const Text(
+                                'Privacy: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                _isPrivate ? 'Private' : 'Public',
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                          const Divider(color: Colors.grey),
+
+                          // Photos
+                          if (_selectedImages.isNotEmpty)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Photos:',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 120,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _selectedImages.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 5.0),
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          child: Image.file(
+                                            _selectedImages[index],
+                                            height: 120,
+                                            width: 120,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Actions
+                const Divider(color: Colors.grey),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close to edit
+                        },
+                        child: const Text(
+                          'Edit',
+                          style:
+                              TextStyle(color: Color.fromRGBO(88, 126, 75, 1)),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Center(
-                        child: Image.file(
-                          _imageFile!,
-                          height: 150,
-                          width: 150,
-                          fit: BoxFit.cover,
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          FocusScope.of(context).unfocus();
+                          await _createRecipe();
+                        },
+                        child: const Text(
+                          'Confirm',
+                          style:
+                              TextStyle(color: Color.fromRGBO(88, 126, 75, 1)),
                         ),
                       ),
                     ],
                   ),
+                )
               ],
             ),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text(
-                'Edit',
-                style: TextStyle(
-                  color: Color.fromRGBO(88, 126, 75, 1),
-                  fontSize: 16,
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog to edit
-              },
-            ),
-            TextButton(
-              child: const Text(
-                'Confirm',
-                style: TextStyle(
-                  color: Color.fromRGBO(88, 126, 75, 1),
-                  fontSize: 16,
-                ),
-              ),
-              onPressed: () async {
-                Navigator.of(context).pop(); // Close the preview dialog
-                // Unfocus all text fields to dismiss the keyboard
-                FocusScope.of(context).unfocus();
-                await _createRecipe(); // Call the function to create the recipe
-              },
-            ),
-          ],
         );
       },
     );
@@ -355,7 +395,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
           return;
         }
       }
-
+      List<String> imageUrls = await _uploadImages();
       Map<String, dynamic> recipeData = {
         'name': _recipeName,
         'description': _description,
@@ -363,7 +403,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
         'steps': _instructions,
         'difficulty': _difficulty,
         'cookingTime': "${_hours}h ${_minutes}m ${_seconds}s",
-        'image': imageUrl,
+        'image': imageUrls,
         'source': _isPrivate ? 'private' : 'public',
         'created_at': Timestamp.now(),
         'createdBy': widget.username,
@@ -400,231 +440,255 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Recipe Created Successfully',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color.fromRGBO(88, 126, 75, 1),
-            ),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
           ),
-          content: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Name
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Name: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _recipeName,
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                // Description
-                if (_description.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'Description: $_description',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                    ),
-                  ),
-                const Divider(color: Colors.grey),
-                // Cooking Time
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Cooking Time: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        "${_hours}h ${_minutes}m ${_seconds}s",
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: Colors.grey),
-                // Ingredients
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Ingredients:',
+                    'Recipe Created Successfully',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Color.fromRGBO(88, 126, 75, 1),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _ingredients
-                        .replaceAll('[', '')
-                        .replaceAll(']', '')
-                        .split(',')
-                        .map((ingredient) => Text(
-                              '- ${ingredient.trim()}',
-                              style: const TextStyle(
-                                  fontSize: 16, color: Colors.black54),
-                            ))
-                        .toList(),
                   ),
                 ),
                 const Divider(color: Colors.grey),
-                // Instructions
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    'Steps:',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _instructions
-                        .replaceAll('[', '')
-                        .replaceAll(']', '')
-                        .replaceAll('"', '')
-                        .split(',')
-                        .asMap()
-                        .entries
-                        .map((entry) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Text(
-                                'Step ${entry.key + 1}: ${entry.value.trim()}',
+
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          // Name
+                          Row(
+                            children: [
+                              const Text(
+                                'Name: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  _recipeName,
+                                  style: const TextStyle(
+                                      fontSize: 16, color: Colors.black54),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Description
+                          if (_description.isNotEmpty)
+                            Text(
+                              'Description: $_description',
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.grey[700]),
+                            ),
+                          const Divider(color: Colors.grey),
+
+                          // Cooking Time
+                          Row(
+                            children: [
+                              const Text(
+                                'Cooking Time: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                "${_hours}h ${_minutes}m ${_seconds}s",
                                 style: const TextStyle(
                                     fontSize: 16, color: Colors.black54),
                               ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                const Divider(color: Colors.grey),
-                // Difficulty
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Difficulty: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _difficulty,
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: Colors.grey),
-                // Privacy Settings
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Privacy: ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        _isPrivate ? 'Private' : 'Public',
-                        style: const TextStyle(
-                            fontSize: 16, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                // Photo
-                if (_imageFile != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10.0),
-                        child: Text(
-                          'Photo:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            ],
                           ),
-                        ),
+                          const Divider(color: Colors.grey),
+
+                          // Ingredients
+                          const Text(
+                            'Ingredients:',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          ..._ingredients
+                              .replaceAll('[', '')
+                              .replaceAll(']', '')
+                              .split(',')
+                              .map((ingredient) => Text(
+                                    '- ${ingredient.trim()}',
+                                    style: const TextStyle(
+                                        fontSize: 16, color: Colors.black54),
+                                  )),
+                          const Divider(color: Colors.grey),
+
+                          // Steps
+                          const Text(
+                            'Steps:',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          ..._instructions
+                              .replaceAll('[', '')
+                              .replaceAll(']', '')
+                              .replaceAll('"', '')
+                              .split(',')
+                              .asMap()
+                              .entries
+                              .map((entry) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4.0),
+                                    child: Text(
+                                      'Step ${entry.key + 1}: ${entry.value.trim()}',
+                                      style: const TextStyle(
+                                          fontSize: 16, color: Colors.black54),
+                                    ),
+                                  )),
+                          const Divider(color: Colors.grey),
+
+                          // Difficulty
+                          Row(
+                            children: [
+                              const Text(
+                                'Difficulty: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                _difficulty,
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                          const Divider(color: Colors.grey),
+
+                          // Privacy Settings
+                          Row(
+                            children: [
+                              const Text(
+                                'Privacy: ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                _isPrivate ? 'Private' : 'Public',
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                          const Divider(color: Colors.grey),
+
+                          // Photos
+                          if (_selectedImages.isNotEmpty)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Photos:',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 120,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _selectedImages.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 5.0),
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          child: Image.file(
+                                            _selectedImages[index],
+                                            height: 120,
+                                            width: 120,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      Center(
-                        child: Image.file(
-                          _imageFile!,
-                          height: 150,
-                          width: 150,
-                          fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                // Actions
+                const Divider(color: Colors.grey),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  HomePage(username: widget.username),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(
+                              color: Color.fromRGBO(88, 126, 75, 1),
+                              fontSize: 16),
                         ),
                       ),
                     ],
                   ),
+                )
               ],
             ),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text(
-                'OK',
-                style: TextStyle(
-                  color: Color.fromRGBO(88, 126, 75, 1),
-                  fontSize: 16,
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                // Navigate to homepage after confirmation
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(username: widget.username),
-                  ),
-                );
-              },
-            ),
-          ],
         );
       },
     );
@@ -987,24 +1051,53 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                     ),
                     const SizedBox(width: 10),
 
-                    // Check if _imageFile is not null, then display the image
-                    if (_imageFile != null)
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: const Color(
-                                  0xFF6C8D5B)), // border for better visibility
-                          borderRadius:
-                              BorderRadius.circular(8), //rounded corners
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            _imageFile!,
-                            fit: BoxFit
-                                .cover, // Adjust how the image fits within the container
+                    // Display selected images
+                    if (_selectedImages.isNotEmpty)
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _selectedImages.map((imageFile) {
+                              int index = _selectedImages
+                                  .indexOf(imageFile); // Get index of image
+
+                              return Stack(
+                                children: [
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 5),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: const Color(0xFF6C8D5B)),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(
+                                        imageFile,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.remove_circle,
+                                          color: Colors.red),
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedImages.removeAt(
+                                              index); // Remove the image at the given index
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
                           ),
                         ),
                       ),
@@ -1020,7 +1113,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                         ? null
                         : () async {
                             if (_formKey.currentState!.validate()) {
-                              if (_imageFile == null) {
+                              if (_selectedImages.isEmpty) {
                                 // Show a pop-up dialog if no image is selected
                                 showDialog(
                                   context: context,
@@ -1045,7 +1138,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                                         ],
                                       ),
                                       content: const Text(
-                                        'Please upload an image for your recipe.',
+                                        'Please upload at least one image for your recipe.',
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: Colors.black54,

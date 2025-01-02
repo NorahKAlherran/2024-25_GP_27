@@ -248,6 +248,7 @@ class _RecipesPageState extends State<RecipesPage> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 137, 174, 124),
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -535,10 +536,18 @@ class Recipe {
 
   factory Recipe.fromFirestore(QueryDocumentSnapshot doc, String collection) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // Safely handle the 'image' field
+    String image = '';
+    if (data['image'] is String) {
+      image = data['image']; // Single image URL as a string
+    } else if (data['image'] is List<dynamic> && data['image'].isNotEmpty) {
+      image = data['image'][0]; // First image from the list
+    }
     return Recipe(
       id: doc.id,
       name: data['name'] ?? '',
-      image: data['image'] ?? '',
+      image: image,
       difficulty: data['difficulty'] ?? data['difficult'] ?? '',
       flag: collection == 'recipes' ? 'recipes' : 'users_recipes',
     );

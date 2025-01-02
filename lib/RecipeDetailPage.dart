@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'nav_bar.dart';
 
 // qoot recipes details
-// qoot recipes details
+
 class RecipeDetailPage extends StatefulWidget {
   final String recipeId;
   final String username;
@@ -515,18 +515,16 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                         .min, // This ensures the column takes up minimal space
                     children: [
                       Icon(
-                        Icons.translate, // The icon
-                        size: 36.0, // Icon size
-                        color: Color.fromRGBO(88, 126, 75, 1), // Icon color
+                        Icons.translate,
+                        size: 36.0,
+                        color: Color.fromRGBO(88, 126, 75, 1),
                       ),
                       Text(
-                        'Translation', // The word above the icon
+                        'Translation',
                         style: TextStyle(
                           fontSize: 12.0,
-                          fontWeight:
-                              FontWeight.bold, // Adjust the font size as needed
-                          color: Color.fromRGBO(
-                              88, 126, 75, 1), // Adjust the color as needed
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromRGBO(88, 126, 75, 1),
                         ),
                       ),
                     ],
@@ -535,23 +533,19 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
                 IconButton(
                   icon: Column(
-                    mainAxisSize: MainAxisSize
-                        .min, // Ensure the column takes minimal space
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         _isFavorite ? Icons.favorite : Icons.favorite_border,
-                        size: 40, // Icon size
-                        color: Colors.red, // Icon color
+                        size: 40,
+                        color: Colors.red,
                       ),
                       Text(
-                        _isFavorite
-                            ? 'Favorite'
-                            : 'Collection', // The text below the icon
+                        _isFavorite ? 'Favorite' : 'Collection',
                         style: TextStyle(
                           fontSize: 12.0,
                           fontWeight: FontWeight.bold,
-                          // Adjust the font size as needed
-                          color: Colors.red, // Text color
+                          color: Colors.red,
                         ),
                       ),
                     ],

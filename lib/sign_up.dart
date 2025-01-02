@@ -181,7 +181,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account has successfully created!!')),
+          const SnackBar(content: Text('Account has successfully created!')),
         );
 
         Navigator.pushReplacement(

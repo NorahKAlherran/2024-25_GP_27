@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'RecipeDetailPage.dart';
 import 'recipe_detail_page_user.dart';
+import 'nav_bar.dart';
 
 class CollectionDetailsPage extends StatefulWidget {
   final String collectionId;
@@ -10,7 +11,9 @@ class CollectionDetailsPage extends StatefulWidget {
   CollectionDetailsPage({
     required this.collectionId,
     required this.username,
-  });
+  }) {
+    print('CollectionDetailsPage initialized with username: $username');
+  }
 
   @override
   _CollectionDetailsPageState createState() => _CollectionDetailsPageState();
@@ -168,60 +171,97 @@ class _CollectionDetailsPageState extends State<CollectionDetailsPage> {
               final recipeName = recipeData['name'];
               final recipeImage = recipeData['image'];
 
-              return ListTile(
-                title: Text(recipeName),
-                leading: recipeImage != null
-                    ? Image.network(recipeImage,
-                        width: 50, height: 50, fit: BoxFit.cover)
-                    : Icon(Icons.image),
-                trailing: IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red),
-                  onPressed: () {
-                    _showDeleteConfirmationDialog(recipeId, recipeName);
-                  },
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ListTile(
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: recipeImage != null && recipeImage.isNotEmpty
+                          ? Image.network(
+                              recipeImage,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            )
+                          : Icon(Icons.image, size: 60, color: Colors.grey),
+                    ),
+                    title: Text(
+                      recipeName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        _showDeleteConfirmationDialog(recipeId, recipeName);
+                      },
+                    ),
+                    onTap: () async {
+                      final doc = await _fetchRecipeDetails(recipeId);
+                      if (!doc.exists) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Recipe not found')),
+                        );
+                        return;
+                      }
+
+                      final recipeData = doc.data() as Map<String, dynamic>;
+                      final flag = recipeData['flag'] ?? 'unknown';
+
+                      if (flag == 'recipes') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RecipeDetailPage(
+                              recipeId: recipeId,
+                              username: widget.username,
+                            ),
+                          ),
+                        );
+                      } else if (flag == 'users_recipes') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RecipeDetailPageUser(
+                              recipeId: recipeId,
+                              username: widget.username,
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Unknown recipe type')),
+                        );
+                      }
+                    },
+                  ),
                 ),
-                onTap: () async {
-                  final doc = await _fetchRecipeDetails(recipeId);
-                  if (!doc.exists) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Recipe not found')),
-                    );
-                    return;
-                  }
-
-                  final recipeData = doc.data() as Map<String, dynamic>;
-                  final flag = recipeData['flag'] ?? 'unknown';
-
-                  if (flag == 'recipes') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RecipeDetailPage(
-                          recipeId: recipeId,
-                          username: widget.username,
-                        ),
-                      ),
-                    );
-                  } else if (flag == 'users_recipes') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RecipeDetailPageUser(
-                          recipeId: recipeId,
-                          username: widget.username,
-                        ),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Unknown recipe type')),
-                    );
-                  }
-                },
               );
             },
           );
         },
+      ),
+      bottomNavigationBar: CustomNavBar(
+        username: widget.username,
+        currentIndex: 2,
       ),
     );
   }

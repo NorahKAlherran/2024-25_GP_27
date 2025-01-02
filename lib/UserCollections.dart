@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'nav_bar.dart';
-
 import ' CollectionDetailsPage.dart';
 
 class UserCollectionsPage extends StatefulWidget {
@@ -24,7 +23,7 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
       builder: (context) {
         final _collectionNameController = TextEditingController();
         bool _isValid = false;
-        String _errorMessage = ''; // Error message to display inside the dialog
+        String _errorMessage = '';
 
         return StatefulBuilder(
           builder: (context, setState) {
@@ -62,7 +61,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                     ),
                     onChanged: (text) {
                       setState(() {
-                        // Real-time validation to check if the name is not empty
                         _isValid = text.trim().isNotEmpty;
                         _errorMessage = '';
                       });
@@ -96,7 +94,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                               _collectionNameController.text.trim();
 
                           if (_isValid && collectionName.isNotEmpty) {
-                            // Check if the collection name already exists for this user
                             final querySnapshot = await FirebaseFirestore
                                 .instance
                                 .collection('collections')
@@ -113,7 +110,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                                 'createdBy': user!.uid,
                               });
                               Navigator.of(context).pop();
-                              // Show success message
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content:
@@ -123,7 +119,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                                 ),
                               );
                             } else {
-                              // error message
                               setState(() {
                                 _errorMessage =
                                     'Collection name already exists!';
@@ -131,7 +126,7 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                             }
                           }
                         }
-                      : null, // Disable button if the name is empty
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 137, 174, 124),
                     shape: RoundedRectangleBorder(
@@ -151,7 +146,7 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
     );
   }
 
-// Function to edit a collection name
+  // Function to edit a collection name
   void _editCollection(
       BuildContext context, String collectionId, String currentName) {
     showDialog(
@@ -159,68 +154,119 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
       builder: (context) {
         final _editCollectionController =
             TextEditingController(text: currentName);
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: Row(
-            children: [
-              SizedBox(width: 8),
-              Text(
-                'Edit Collection',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
+        bool _isValid = true;
+        String _errorMessage = '';
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
               ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(height: 12),
-              TextField(
-                controller: _editCollectionController,
-                decoration: InputDecoration(
-                  hintText: 'Collection Name',
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
+              title: Row(
+                children: [
+                  SizedBox(width: 8),
+                  Text(
+                    'Edit Collection',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final updatedName = _editCollectionController.text.trim();
-                if (updatedName.isNotEmpty) {
-                  await FirebaseFirestore.instance
-                      .collection('collections')
-                      .doc(collectionId)
-                      .update({'name': updatedName});
-                  Navigator.of(context).pop();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 137, 174, 124),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 12),
+                  TextField(
+                    controller: _editCollectionController,
+                    decoration: InputDecoration(
+                      hintText: 'Collection Name',
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    onChanged: (text) {
+                      setState(() {
+                        _isValid = text.trim().isNotEmpty;
+                        _errorMessage = '';
+                      });
+                    },
+                  ),
+                  if (_errorMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        _errorMessage,
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              child: Text('Save', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: _isValid
+                      ? () async {
+                          final updatedName =
+                              _editCollectionController.text.trim();
+
+                          if (updatedName.isNotEmpty) {
+                            final querySnapshot = await FirebaseFirestore
+                                .instance
+                                .collection('collections')
+                                .where('name', isEqualTo: updatedName)
+                                .where('createdBy', isEqualTo: user!.uid)
+                                .get();
+
+                            if (querySnapshot.docs.isEmpty) {
+                              await FirebaseFirestore.instance
+                                  .collection('collections')
+                                  .doc(collectionId)
+                                  .update({'name': updatedName});
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text('Collection updated successfully!'),
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 118, 133, 118),
+                                ),
+                              );
+                            } else {
+                              setState(() {
+                                _errorMessage =
+                                    'Collection name already exists!';
+                              });
+                            }
+                          }
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 137, 174, 124),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text('Save', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -265,7 +311,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                     .doc(collectionId)
                     .delete();
                 Navigator.of(context).pop();
-                // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Collection deleted successfully!'),
@@ -298,7 +343,7 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
           MaterialPageRoute(
             builder: (context) => CollectionDetailsPage(
               collectionId: collection.id,
-              username: '',
+              username: widget.username,
             ),
           ),
         );
@@ -310,14 +355,16 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
         elevation: 3,
         child: Column(
           children: [
-            // Collection Image
             Expanded(
               flex: 3,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                  image: recipes.isNotEmpty && recipes.last['image'] != null
+                  image: (recipes.isNotEmpty &&
+                          recipes.last['image'] != null &&
+                          recipes.last['image'] is String &&
+                          (recipes.last['image'] as String).isNotEmpty)
                       ? DecorationImage(
                           image: NetworkImage(recipes.last['image']),
                           fit: BoxFit.cover,
@@ -325,7 +372,10 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                       : null,
                   color: Colors.grey[300],
                 ),
-                child: recipes.isEmpty
+                child: recipes.isEmpty ||
+                        recipes.last['image'] == null ||
+                        recipes.last['image'] is! String ||
+                        (recipes.last['image'] as String).isEmpty
                     ? Icon(Icons.add_photo_alternate, color: Colors.grey)
                     : null,
               ),
@@ -337,7 +387,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Collection Name
                     Text(
                       data['name'] ?? 'Unnamed Collection',
                       style:
@@ -346,7 +395,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
-                    // Display number of recipes
                     SizedBox(height: 5),
                     Text(
                       '${recipes.length} ${recipes.length == 1 ? 'Recipe' : 'Recipes'}',
@@ -359,7 +407,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
                 ),
               ),
             ),
-            // Edit and Delete Icons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -395,8 +442,7 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
       body: StreamBuilder(
         stream: FirebaseFirestore.instance
             .collection('collections')
-            .where('createdBy',
-                isEqualTo: user!.uid) // Retrieve collections for logged-in user
+            .where('createdBy', isEqualTo: user!.uid)
             .snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -404,7 +450,6 @@ class _UserCollectionsPageState extends State<UserCollectionsPage> {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            // Show empty state if no collections exist
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

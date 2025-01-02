@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } on FirebaseAuthException catch (e) {
         setState(() {
           _errorMessage =
-              'Invalid email/username or password'; // Set error message
+              'Invalid email/username or password'; //  error message
         });
 
         print('Login error: ${e.code} - ${e.message}');

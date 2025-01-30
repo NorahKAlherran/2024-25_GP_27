@@ -537,7 +537,7 @@ Future<void> _deleteNote() async {
 
                                         if (existingCollection
                                             .docs.isNotEmpty) {
-                                          // Update the error message if the name already exists
+                                          // Update the error message if the name already exists.
                                           setState(() {
                                             errorMessage =
                                                 'Collection name already exists.';

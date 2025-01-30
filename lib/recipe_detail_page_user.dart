@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'nav_bar.dart';
 import 'chat_service.dart';
 
-// Helper function to format cooking time
+// Helper function to format cooking time.
 String formatCookingTime(String cookingTime) {
   int hours = 0;
   int minutes = 0;

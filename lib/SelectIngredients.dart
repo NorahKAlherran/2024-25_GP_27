@@ -207,7 +207,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
 
   String getValidImageUrl(String? url) {
     if (url == null || url.isEmpty) {
-      return 'https://via.placeholder.com/150'; // Placeholder image URL
+      return 'https://via.placeholder.com/150';
     }
     return url;
   }
@@ -259,8 +259,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
               ...docData,
               'id': doc.id,
               'source': 'recipes',
-              'image': getValidImageUrl(
-                  docData['image']), // Make sure getValidImageUrl exists
+              'image': getValidImageUrl(docData['image']),
             });
           }
         } else {
@@ -289,8 +288,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
               ...docData,
               'id': doc.id,
               'source': 'users_recipes',
-              'image': getValidImageUrl(
-                  docData['image']), // Make sure getValidImageUrl exists
+              'image': getValidImageUrl(docData['image']),
             });
           }
         } else {
@@ -402,7 +400,7 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
                       ],
                     ),
                   ),
-                  // Expanded ListView for categories and ingredients
+
                   Expanded(
                     child: ListView(
                       children: [
@@ -698,7 +696,6 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
                                                 children: [
-                                                  // Dialog handle for better UX
                                                   Container(
                                                     height: 5,
                                                     width: 50,
@@ -867,7 +864,6 @@ class _SelectIngredientsPageState extends State<SelectIngredientsPage> {
                                                   ),
                                                 ],
                                               ),
-                                              // Enhanced Scroll Indicator
                                               Align(
                                                 alignment:
                                                     Alignment.bottomCenter,

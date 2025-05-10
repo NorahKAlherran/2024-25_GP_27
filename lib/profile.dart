@@ -30,6 +30,20 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadUserData();
   }
 
+  Future<void> _updateUsernameInRecipesByUid(
+      String uid, String newUsername) async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('users_recipes')
+        .where('creatorId', isEqualTo: uid)
+        .get();
+
+    for (var doc in querySnapshot.docs) {
+      await doc.reference.update({'createdBy': newUsername});
+    }
+
+    print('Updated ${querySnapshot.docs.length} recipes for creatorId $uid');
+  }
+
   Future<void> _loadUserData() async {
     try {
       User? user = _auth.currentUser;
@@ -69,11 +83,14 @@ class _ProfilePageState extends State<ProfilePage> {
     if (user != null) {
       String uid = user.uid;
 
-      // Update username in Firestore
+      // Update Firestore profile
       await _firestore
           .collection('users')
           .doc(uid)
           .update({'username': newUsername});
+
+      // Update all user-created recipes using creatorId
+      await _updateUsernameInRecipesByUid(uid, newUsername);
 
       setState(() {
         _name = newUsername;
@@ -85,13 +102,9 @@ class _ProfilePageState extends State<ProfilePage> {
           backgroundColor: const Color.fromARGB(255, 118, 133, 118),
           actions: [
             TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-              },
-              child: Text(
-                'DISMISS',
-                style: TextStyle(color: Colors.white),
-              ),
+              onPressed: () =>
+                  ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
+              child: Text('DISMISS', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -150,15 +163,13 @@ class _ProfilePageState extends State<ProfilePage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary:
-                  const Color.fromRGBO(88, 126, 75, 1), // Header background
-              onPrimary: Colors.white, // Header text color
-              onSurface: Colors.black, // Body text color
+              primary: const Color.fromRGBO(88, 126, 75, 1),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor:
-                    const Color.fromRGBO(88, 126, 75, 1), // Button text color
+                foregroundColor: const Color.fromRGBO(88, 126, 75, 1),
               ),
             ),
           ),
@@ -313,11 +324,9 @@ class _ProfilePageState extends State<ProfilePage> {
           password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
     }
 
-    bool _isCurrentPasswordObscured =
-        true; // To manage current password visibility
-    bool _isNewPasswordObscured = true; // To manage new password visibility
-    bool _isConfirmPasswordObscured =
-        true; // To manage confirm password visibility
+    bool _isCurrentPasswordObscured = true;
+    bool _isNewPasswordObscured = true;
+    bool _isConfirmPasswordObscured = true;
     showDialog(
       context: context,
       builder: (context) {
@@ -361,8 +370,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isCurrentPasswordObscured
-                                ? Icons.visibility_off // Eye icon with a slash
-                                : Icons.visibility, // Regular eye icon
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey,
                           ),
                           onPressed: () {
@@ -403,14 +412,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isNewPasswordObscured
-                                ? Icons.visibility_off // Eye icon with a slash
-                                : Icons.visibility, // Regular eye icon
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey,
                           ),
                           onPressed: () {
                             setState(() {
-                              _isNewPasswordObscured =
-                                  !_isNewPasswordObscured; // Toggle visibility
+                              _isNewPasswordObscured = !_isNewPasswordObscured;
                             });
                           },
                         ),
@@ -506,14 +514,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isConfirmPasswordObscured
-                                ? Icons.visibility_off // Eye icon with a slash
-                                : Icons.visibility, // Regular eye icon
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey,
                           ),
                           onPressed: () {
                             setState(() {
                               _isConfirmPasswordObscured =
-                                  !_isConfirmPasswordObscured; // Toggle visibility
+                                  !_isConfirmPasswordObscured;
                             });
                           },
                         ),
@@ -573,17 +581,14 @@ class _ProfilePageState extends State<ProfilePage> {
                               // Log out the user
                               await _auth.signOut();
 
-                              Navigator.of(context)
-                                  .pop(); // Close the change password dialog
+                              Navigator.of(context).pop();
 
                               // Redirect to login screen
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
-                                    builder: (context) =>
-                                        LoginScreen()), // Replace with your login screen
+                                    builder: (context) => LoginScreen()),
                               );
 
-                              // Optionally, show success message (if needed)
                               showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
@@ -638,7 +643,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _showLogoutConfirmationDialog() async {
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, // Prevent closing by tapping outside
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -690,8 +695,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: TextStyle(color: Colors.white),
               ),
               onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog
-                await _auth.signOut(); // Sign out the user
+                Navigator.of(context).pop();
+                await _auth.signOut();
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const LandingPage()),
@@ -719,7 +724,7 @@ class _ProfilePageState extends State<ProfilePage> {
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                mainAxisSize: MainAxisSize.min, // Prevents infinite height
+                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Container(
                     decoration: BoxDecoration(

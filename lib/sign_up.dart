@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'homepage.dart';
 import 'login.dart';
 import 'package:intl/intl.dart';
+import 'main.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -98,7 +99,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  // Function to validate password in real-time
   void _validatePassword(String value) {
     setState(() {
       _hasMinLength = value.length >= 8;
@@ -107,7 +107,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  // Function to handle user sign-up
+// Function to handle user sign-up
   void _signUp() async {
     setState(() {
       _showPasswordRequirements = true;
@@ -136,29 +136,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       // Collect error messages if both or either is taken
       if (usernameDocuments.isNotEmpty && emailDocuments.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Both username and email are already taken. Please choose different ones.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Both username and email are already taken. Please choose different ones.')));
         setState(() {
           _isLoading = false;
         });
         return;
       } else if (usernameDocuments.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Username already taken. Please choose another.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Username already taken. Please choose another.')));
         setState(() {
           _isLoading = false;
         });
         return;
       } else if (emailDocuments.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Email already taken. Please choose another.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Email already taken. Please choose another.')));
         setState(() {
           _isLoading = false;
         });
@@ -173,16 +167,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
           password: _password,
         );
 
+        // Send email verification
+        User? user = userCredential.user;
+        if (user != null && !user.emailVerified) {
+          await user.sendEmailVerification();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'A verification email has been sent. Please verify your email.')));
+        }
+
         // Save the user data in Firestore
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        await _firestore.collection('users').doc(user?.uid).set({
           'username': _username,
           'email': _email,
           'dob': _dob,
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account has successfully created!')),
-        );
 
         Navigator.pushReplacement(
           context,
@@ -269,10 +268,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 246, 239, 219),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LandingPage(),
+              ),
+            );
+          },
+        ),
         title: const Text(
           'Sign Up',
           style: TextStyle(
-              fontFamily: 'Times New Roman', fontWeight: FontWeight.bold),
+            fontFamily: 'Times New Roman',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: const Color.fromARGB(255, 137, 174, 124),
       ),
@@ -318,10 +330,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+')
-                          .hasMatch(value)) {
-                        return 'Please enter a valid email address';
-                      }
                       return null;
                     },
                     onChanged: (value) {
@@ -333,7 +341,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   TextFormField(
                     key: _passwordFieldKey,
                     focusNode: _passwordFocus,
-                    obscureText: !_isPasswordVisible, // Toggle visibility
+                    obscureText: !_isPasswordVisible,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: InputDecoration(
                       labelText: 'Password *',
                       prefixIcon: const Icon(Icons.lock),
@@ -354,29 +363,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (!_hasMinLength ||
-                          !_hasUppercase ||
-                          !_hasSpecialChar) {
-                        return 'Password must meet all requirements';
-                      }
                       return null;
                     },
                     onChanged: (value) {
                       _password = value;
-                      _validatePassword(
-                          value); // Validate password requirements
+                      _validatePassword(value);
                     },
                     style: const TextStyle(fontFamily: 'Times New Roman'),
                   ),
-                  const SizedBox(height: 20),
-                  if (_showPasswordRequirements) _buildPasswordRequirements(),
-                  const SizedBox(height: 20),
+                  if (_showPasswordRequirements) ...[
+                    const SizedBox(height: 10),
+                    _buildPasswordRequirements(),
+                    const SizedBox(height: 20),
+                  ],
                   TextFormField(
                     key: _confirmPasswordFieldKey,
                     focusNode: _confirmPasswordFocus,
+                    obscureText: !_isConfirmPasswordVisible,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
-                    obscureText:
-                        !_isConfirmPasswordVisible, // Toggle visibility
                     decoration: InputDecoration(
                       labelText: 'Confirm Password *',
                       prefixIcon: const Icon(Icons.lock),
@@ -395,9 +399,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
                       if (value != _password) {
                         return 'Passwords do not match';
                       }
@@ -440,35 +441,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 const Color.fromARGB(255, 137, 174, 124),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 80, vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                            ),
                           ),
                           child: const Text(
                             'Sign Up',
                             style: TextStyle(
-                              fontSize: 17,
-                              color: Color(0xFF000000),
+                              fontFamily: 'Times New Roman',
+                              fontSize: 16,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                    children: <Widget>[
                       const Text(
-                        'Already have an account?',
+                        'Already have an account? ',
                         style: TextStyle(fontFamily: 'Times New Roman'),
                       ),
-                      TextButton(
-                        child: const Text(
-                          'Log In',
-                          style: TextStyle(fontFamily: 'Times New Roman'),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pushReplacement(
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
                             MaterialPageRoute(
                               builder: (context) => const LoginScreen(),
                             ),
                           );
                         },
+                        child: const Text(
+                          'Log In',
+                          style: TextStyle(
+                            fontFamily: 'Times New Roman',
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(255, 137, 174, 124),
+                          ),
+                        ),
                       ),
                     ],
                   ),

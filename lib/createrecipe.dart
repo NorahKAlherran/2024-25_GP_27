@@ -1,10 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'homepage.dart';
+import 'recipe_detail_page_user.dart';
 import 'nav_bar.dart';
+import 'chat_service.dart';
 
 class CreateRecipePage extends StatefulWidget {
   final String username;
@@ -103,13 +106,12 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
   Future<List<String>> _uploadImages() async {
     List<String> downloadUrls = []; // List to store URLs of the uploaded images
     for (var image in _selectedImages) {
-      String? downloadUrl =
-          await _uploadImage(image); // Upload each image and get its URL
+      String? downloadUrl = await _uploadImage(image);
       if (downloadUrl != null) {
         downloadUrls.add(downloadUrl); // Add the URL to the list
       }
     }
-    return downloadUrls; // Return the list of URLs
+    return downloadUrls;
   }
 
   // Function to show preview dialog before submission
@@ -216,6 +218,8 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                               .replaceAll('[', '')
                               .replaceAll(']', '')
                               .split(',')
+                              .map((ingredient) => ingredient.trim())
+                              .where((ingredient) => ingredient.isNotEmpty)
                               .map((ingredient) => Text(
                                     '- ${ingredient.trim()}',
                                     style: const TextStyle(
@@ -238,13 +242,16 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                               .replaceAll(']', '')
                               .replaceAll('"', '')
                               .split(',')
+                              .map((step) => step.trim())
+                              .where((step) => step.isNotEmpty)
+                              .toList()
                               .asMap()
                               .entries
                               .map((entry) => Padding(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 4.0),
                                     child: Text(
-                                      'Step ${entry.key + 1}: ${entry.value.trim()}',
+                                      'Step ${entry.key + 1}: ${entry.value}',
                                       style: const TextStyle(
                                           fontSize: 16, color: Colors.black54),
                                     ),
@@ -384,18 +391,8 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
         _isLoading = true; // Start loading
       });
 
-      String? imageUrl;
-      if (_imageFile != null) {
-        imageUrl = await _uploadImage(_imageFile!);
-        if (imageUrl == null) {
-          print('Image URL is null. Recipe will not be created.');
-          setState(() {
-            _isLoading = false; // Stop loading if upload fails
-          });
-          return;
-        }
-      }
       List<String> imageUrls = await _uploadImages();
+
       Map<String, dynamic> recipeData = {
         'name': _recipeName,
         'description': _description,
@@ -408,20 +405,82 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
         'created_at': Timestamp.now(),
         'createdBy': widget.username,
         'flag': 'users_recipes',
+        'creatorId': FirebaseAuth.instance.currentUser!.uid,
       };
 
       try {
-        await FirebaseFirestore.instance
+        DocumentReference docRef = await FirebaseFirestore.instance
             .collection('users_recipes')
             .add(recipeData);
+        String recipeId = docRef.id; // Get the ID of the newly created recipe
+
         print('Recipe created successfully!');
 
-        // Stop the loading state before showing the dialog
+        // Generate tags using ChatService
+        List<String> tags = await generateRecipeTags(
+          _recipeName,
+          _description,
+          _ingredients.split(',').map((e) => e.trim()).toList(),
+        );
+
+        //  Store tags in Firestore
+        await FirebaseFirestore.instance
+            .collection('users_recipes')
+            .doc(recipeId)
+            .update({'Tags': tags});
+//  Translate entire recipe (including tags)
+        final translated = await translateWholeRecipe(
+          title: _recipeName,
+          difficulty: _difficulty,
+          description: _description,
+          ingredients: _ingredients.split(',').map((e) => e.trim()).toList(),
+          steps: _instructions.split(',').map((e) => e.trim()).toList(),
+          cookingTime: "${_hours}h ${_minutes}m ${_seconds}s",
+          tags: tags,
+        );
+
+//  If successful, store under translations/ar and merge Arabic tags
+        if (translated.isNotEmpty) {
+          final List<String> arabicTags =
+              (translated['tags'] as List).map((e) => e.toString()).toList();
+
+          // Combine both English and Arabic tags
+          final combinedTags = {
+            ...tags,
+            ...arabicTags,
+          }.toList(); // ensure no duplicates
+
+          //  Save Arabic translation
+          await FirebaseFirestore.instance
+              .collection('users_recipes')
+              .doc(recipeId)
+              .collection('translations')
+              .doc('ar')
+              .set({
+            'name': translated['title'] ?? '',
+            'description': translated['description'] ?? '',
+            'ingredients': translated['ingredients'] ?? [],
+            'steps': translated['steps'] ?? [],
+            'difficulty': translated['difficulty'] ?? '',
+            'cookingTime': translated['cookingTime'] ?? '',
+            'Tags': arabicTags,
+            'sourceLang': 'en',
+            'sourceLastUpdated': Timestamp.now(),
+          });
+
+          //  update the main Tags field to include Arabic too
+          await FirebaseFirestore.instance
+              .collection('users_recipes')
+              .doc(recipeId)
+              .update({'Tags': combinedTags});
+        }
+
         setState(() {
-          _isLoading = false;
+          _isLoading = false; // Stop loading
         });
 
-        _showRecipeDetailsDialog(); // Call the details dialog to show success
+        // Show success dialog with preview
+        _showRecipeDetailsDialog(recipeId, tags);
       } catch (e) {
         print('Failed to create recipe: $e');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -436,7 +495,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
   }
 
   // Function to show recipe details in a dialog after submission
-  void _showRecipeDetailsDialog() {
+  void _showRecipeDetailsDialog(String recipeId, List<String> tags) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -472,55 +531,88 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
+                        children: [
                           // Name
-                          Row(
-                            children: [
-                              const Text(
-                                'Name: ',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  _recipeName,
-                                  style: const TextStyle(
-                                      fontSize: 16, color: Colors.black54),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Recipe Name: $_recipeName',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 8),
 
                           // Description
-                          if (_description.isNotEmpty)
+                          if (_description.isNotEmpty) ...[
                             Text(
-                              'Description: $_description',
+                              'Description:',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              _description,
                               style: TextStyle(
                                   fontSize: 16, color: Colors.grey[700]),
                             ),
-                          const Divider(color: Colors.grey),
+                            const Divider(color: Colors.grey),
+                          ],
+
+                          // Tags Section with Pastel Colors (Now After Description)
+                          if (tags.isNotEmpty) ...[
+                            const Text(
+                              'Tags:',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8.0,
+                              children: tags.asMap().entries.map((entry) {
+                                int index = entry.key;
+                                String tag = entry.value;
+
+                                List<Color> pastelColors = [
+                                  Color(0xFFE3B7D0), // Pastel Pink
+                                  Color(0xFFC1C8E4), // Pastel Blue
+                                  Color(0xFFC1E1DC), // Pastel Mint
+                                  Color(0xFFF7D1BA), // Pastel Peach
+                                  Color(0xFFF2D7E0), // Pastel Lavender
+                                  Color(0xFFF7F1B5), // Pastel Yellow
+                                  Color(0xFFD3F8E2), // Pastel Green
+                                  Color(0xFFF9E2C0), // Pastel Orange
+                                ];
+
+                                // Assign colors in rotation
+                                Color tagColor =
+                                    pastelColors[index % pastelColors.length];
+
+                                return Chip(
+                                  label: Text(
+                                    "#$tag",
+                                    style: TextStyle(
+                                        fontSize: 14, color: Colors.black),
+                                  ),
+                                  backgroundColor: tagColor,
+                                  padding: EdgeInsets.symmetric(horizontal: 1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: BorderSide(color: Colors.transparent),
+                                  ),
+                                  elevation: 0,
+                                );
+                              }).toList(),
+                            ),
+                            const Divider(color: Colors.grey),
+                          ],
 
                           // Cooking Time
-                          Row(
-                            children: [
-                              const Text(
-                                'Cooking Time: ',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              Text(
-                                "${_hours}h ${_minutes}m ${_seconds}s",
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.black54),
-                              ),
-                            ],
+                          Text(
+                            'Cooking Time: ${_hours}h ${_minutes}m ${_seconds}s',
+                            style: TextStyle(fontSize: 16),
                           ),
                           const Divider(color: Colors.grey),
 
@@ -538,6 +630,8 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                               .replaceAll('[', '')
                               .replaceAll(']', '')
                               .split(',')
+                              .map((ingredient) => ingredient.trim())
+                              .where((ingredient) => ingredient.isNotEmpty)
                               .map((ingredient) => Text(
                                     '- ${ingredient.trim()}',
                                     style: const TextStyle(
@@ -560,13 +654,16 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                               .replaceAll(']', '')
                               .replaceAll('"', '')
                               .split(',')
+                              .map((step) => step.trim())
+                              .where((step) => step.isNotEmpty)
+                              .toList()
                               .asMap()
                               .entries
                               .map((entry) => Padding(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 4.0),
                                     child: Text(
-                                      'Step ${entry.key + 1}: ${entry.value.trim()}',
+                                      'Step ${entry.key + 1}: ${entry.value}',
                                       style: const TextStyle(
                                           fontSize: 16, color: Colors.black54),
                                     ),
@@ -671,21 +768,22 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  HomePage(username: widget.username),
+                              builder: (context) => RecipeDetailPageUser(
+                                recipeId: recipeId,
+                                username: widget.username,
+                              ),
                             ),
                           );
                         },
                         child: const Text(
                           'OK',
-                          style: TextStyle(
-                              color: Color.fromRGBO(88, 126, 75, 1),
-                              fontSize: 16),
+                          style:
+                              TextStyle(color: Color.fromRGBO(88, 126, 75, 1)),
                         ),
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -699,14 +797,9 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text("Create Recipe"),
         backgroundColor: const Color.fromARGB(255, 137, 174, 124),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -738,7 +831,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                     return null;
                   },
                   onChanged: (value) {
-                    _recipeName = value; // No need for validate() here
+                    _recipeName = value;
                   },
                   onSaved: (value) {
                     _recipeName = value!;
@@ -749,7 +842,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
 
                 // Description Input (optional)
                 TextFormField(
-                  focusNode: _descriptionFocusNode, // Attach the new FocusNode
+                  focusNode: _descriptionFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'Description (Optional)',
                     labelStyle: TextStyle(fontFamily: 'Times New Roman'),
@@ -1223,10 +1316,10 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
   @override
   void dispose() {
     _recipeNameFocusNode.dispose();
-    _descriptionFocusNode.dispose(); // Dispose the new FocusNode
+    _descriptionFocusNode.dispose();
     _ingredientsFocusNode.dispose();
     _instructionsFocusNode.dispose();
-    _difficultyFocusNode.dispose(); // Dispose the new FocusNode
+    _difficultyFocusNode.dispose();
     super.dispose();
   }
 }

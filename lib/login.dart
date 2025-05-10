@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'homepage.dart';
 import 'sign_up.dart';
+import 'main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,6 +58,24 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _password,
         );
 
+        // Check if email is verified
+        if (!userCredential.user!.emailVerified) {
+          setState(() {
+            _errorMessage = 'Email not verified. Please verify your email.';
+          });
+
+          //  resend verification email
+          await userCredential.user!.sendEmailVerification();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Verification email sent. Please check your inbox.',
+              ),
+            ),
+          );
+          return;
+        }
+
         // Fetch the username from Firestore
         DocumentSnapshot userDoc = await _firestore
             .collection('users')
@@ -74,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } on FirebaseAuthException catch (e) {
         setState(() {
           _errorMessage =
-              'Invalid email/username or password'; //  error message
+              'Invalid email/username or password'; // Set error message
         });
 
         print('Login error: ${e.code} - ${e.message}');
@@ -147,10 +166,25 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 246, 239, 219),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back), // Custom back button icon
+          onPressed: () {
+            // Custom back navigation behavior
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    const LandingPage(), // Replace with your main page widget
+              ),
+            );
+          },
+        ),
         title: const Text(
           'Log in',
           style: TextStyle(
-              fontFamily: 'Times New Roman', fontWeight: FontWeight.bold),
+            fontFamily: 'Times New Roman',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: const Color.fromARGB(255, 137, 174, 124),
       ),
@@ -246,11 +280,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       );
                     },
-                    child: const Text(
-                      "Don't have an account? Sign up",
-                      style: TextStyle(
-                        color: Colors.black54,
-                        fontFamily: 'Times New Roman',
+                    child: RichText(
+                      text: TextSpan(
+                        text: "Don't have an account? ",
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontFamily: 'Times New Roman',
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'Sign up',
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 137, 174, 124),
+                              fontFamily: 'Times New Roman',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -273,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           child: const Text(
-                            'Log in',
+                            'Log In',
                             style: TextStyle(
                               fontFamily: 'Times New Roman',
                               fontSize: 16,

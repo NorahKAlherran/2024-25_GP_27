@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'sign_up.dart';
 import 'login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Initialize Firebase
+  await SharedPreferences.getInstance();
   runApp(const MyApp());
 }
 
@@ -18,9 +20,8 @@ class MyApp extends StatelessWidget {
       title: 'Auth Demo',
       theme: ThemeData(
         colorScheme: const ColorScheme.light(
-          primary: Color.fromARGB(255, 137, 174, 124), // AppBar color
-          secondary: Color.fromRGBO(88, 126, 75, 1), // Buttons
-
+          primary: Color.fromARGB(255, 137, 174, 124),
+          secondary: Color.fromRGBO(88, 126, 75, 1),
           surface: Colors.white,
         ),
         fontFamily: 'TimesNewRoman',
@@ -50,23 +51,19 @@ class _LandingPageState extends State<LandingPage>
   void initState() {
     super.initState();
 
-    // Initialize AnimationController
     _controller = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
     );
 
-    // Scale animation for the logo
     _logoScaleAnimation = Tween<double>(begin: 0.8, end: 1.1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutBack),
     );
 
-    // Opacity animation for the logo
     _logoOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: const Interval(0.1, 0.5)),
     );
 
-    // Slide and opacity animation for welcome text
     _textSlideAnimation =
         Tween<Offset>(begin: const Offset(0, -0.5), end: Offset.zero).animate(
       CurvedAnimation(
@@ -78,7 +75,6 @@ class _LandingPageState extends State<LandingPage>
       CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0)),
     );
 
-    // Slide animation for buttons
     _buttonSlideAnimation =
         Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
       CurvedAnimation(parent: _controller, curve: const Interval(0.7, 1.0)),
@@ -147,7 +143,7 @@ class _LandingPageState extends State<LandingPage>
                       "Welcome! Let's get you started on your journey.",
                       style: TextStyle(
                         fontSize: 20,
-                        color: Color(0xFF7D5315), // Text color preserved
+                        color: Color(0xFF7D5315),
                       ),
                       textAlign: TextAlign.center,
                     ),

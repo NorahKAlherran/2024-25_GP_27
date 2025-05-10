@@ -5,13 +5,16 @@ from nltk.tokenize import word_tokenize
 from firebase_admin import credentials, firestore, initialize_app
 import time
 
+
 # Initialize Firebase
-cred = credentials.Certificate("C:/Users/Noni/Desktop/flutter_application_1/test-4a74f-firebase-adminsdk-6l6tn-2267a1e863.json")
+cred = credentials.Certificate('/Users/saraabdullah/Desktop/flutternew/android/python_script/ServiceAccountKey.json')
 initialize_app(cred)
 db = firestore.client()
 
+# Download necessary NLTK data
 nltk.download('wordnet')
-nltk.download('punkt')
+nltk.download('punkt')  # Ensure 'punkt' tokenizer data is downloaded
+
 def is_food_noun(word):
     """
     Check if a word is a food-related noun using WordNet.
@@ -40,17 +43,17 @@ def safely_parse_ingredients(raw_ingredients):
     Handles cases where the format is not a valid Python literal.
     """
     try:
-       
         parsed_ingredients = ast.literal_eval(raw_ingredients)
         if isinstance(parsed_ingredients, list):
             return parsed_ingredients
     except (SyntaxError, ValueError):
         pass 
-   
+
+    # Attempt manual parsing if literal_eval fails
     if raw_ingredients.startswith("[") and raw_ingredients.endswith("]"):
         # Remove brackets and split manually
         raw_ingredients = raw_ingredients[1:-1]  # Strip brackets
-        items = raw_ingredients.split(",")  # Split by commas
+        items = raw_ingredients.split(",")  # Split by commas (assuming ingredients are comma-separated)
         return [item.strip() for item in items]
 
     print(f"Failed to parse ingredients: {raw_ingredients}")
@@ -115,5 +118,6 @@ def process_and_update_firestore():
 
     print("All recipes processed.")
 
-if __name__ == "_main_":
+# Fixed typo here: should be "__main__"
+if __name__ == "__main__":
     process_and_update_firestore()

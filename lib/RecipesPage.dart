@@ -7,9 +7,12 @@ import 'recipe_detail_page_user.dart';
 
 class RecipesPage extends StatefulWidget {
   final String username;
+  final String? selectedTag;
 
-  RecipesPage({required this.username});
-
+  RecipesPage({
+    required this.username,
+    this.selectedTag,
+  });
   @override
   _RecipesPageState createState() => _RecipesPageState();
 }
@@ -22,10 +25,19 @@ class _RecipesPageState extends State<RecipesPage> {
   List<String> _selectedFlags = [];
   bool _filterApplied = false;
 
+  bool _isTagSearch = false;
+
   @override
   void initState() {
     super.initState();
-    _fetchRecipes();
+    _fetchRecipes().then((_) {
+      if (widget.selectedTag != null && widget.selectedTag!.isNotEmpty) {
+        _isTagSearch = true; // Mark that the search is coming from a tag
+        _searchController.text =
+            widget.selectedTag!; // Populate the search bar with the tag
+        _filterRecipes(tag: widget.selectedTag!);
+      }
+    });
   }
 
   Future<void> _fetchRecipes() async {
@@ -59,28 +71,60 @@ class _RecipesPageState extends State<RecipesPage> {
     }
   }
 
-  Future<void> _filterRecipes() async {
+  Future<void> _filterRecipes({String? tag}) async {
+    print("----- START FILTERING -----");
+    print("Tag being searched: '$tag'");
+    print("Search text: '${_searchController.text}'");
+    print("Selected Difficulty: $_selectedDifficulty");
+    print("Selected Flags: []");
+
+    // Step 1: Start with the full list of recipes
     List<Recipe> filtered = _allRecipes;
 
-    if (_filterApplied) {
+    // Step 2: Apply Tag Filtering
+    if (tag != null && tag.isNotEmpty) {
+      print("Filtering by tag: $tag");
       filtered = filtered.where((recipe) {
-        bool matchesDifficulty = (_selectedDifficulty.isEmpty) ||
-            (_selectedDifficulty == 'Easy' && recipe.difficulty == 'Easy') ||
-            (_selectedDifficulty == 'Difficult' &&
-                (recipe.difficulty == 'Difficult' ||
-                    recipe.difficulty == 'More effort' ||
-                    recipe.difficulty == 'Challenge'));
-
-        bool matchesFlag = _selectedFlags.isEmpty ||
-            (_selectedFlags.contains("QOOT Recipe") &&
-                recipe.flag == 'recipes') ||
-            (_selectedFlags.contains("Other Recipe") &&
-                recipe.flag == 'users_recipes');
-
-        return matchesDifficulty && matchesFlag;
+        if (recipe.Tags == null) return false;
+        return recipe.Tags!.any((recipeTag) =>
+            recipeTag.trim().toLowerCase() == tag.trim().toLowerCase());
       }).toList();
+      print("Total recipes after tag filtering: ${filtered.length}");
     }
 
+    // Step 3: Apply Difficulty Filter on the tag-filtered recipes
+    if (_selectedDifficulty.isNotEmpty) {
+      print("Applying difficulty filter...");
+      filtered = filtered.where((recipe) {
+        bool matchesDifficulty =
+            (_selectedDifficulty == 'Easy' && recipe.difficulty == 'Easy') ||
+                (_selectedDifficulty == 'Difficult' &&
+                    (recipe.difficulty == 'Difficult' ||
+                        recipe.difficulty == 'More effort' ||
+                        recipe.difficulty == 'Challenge'));
+        print(
+            "Recipe: ${recipe.name}, Difficulty: ${recipe.difficulty}, Matches: $matchesDifficulty");
+        return matchesDifficulty;
+      }).toList();
+      print("Total recipes after difficulty filter: ${filtered.length}");
+    }
+
+    // Step 4: Apply Flag Filter (if any)
+    if (_selectedFlags.isNotEmpty) {
+      print("Applying flag filters...");
+      filtered = filtered.where((recipe) {
+        bool matchesFlag = _selectedFlags.contains("QOOT Recipe") &&
+                recipe.flag == 'recipes' ||
+            _selectedFlags.contains("Other Recipe") &&
+                recipe.flag == 'users_recipes';
+        print(
+            "Recipe: ${recipe.name}, Flag: ${recipe.flag}, Matches: $matchesFlag");
+        return matchesFlag;
+      }).toList();
+      print("Total recipes after flag filter: ${filtered.length}");
+    }
+
+    // Step 5: Apply Search Text Filtering (Optional)
     String searchText = _searchController.text.toLowerCase();
     List<Recipe> startsWithSearchText = filtered
         .where((recipe) => recipe.name.toLowerCase().startsWith(searchText))
@@ -91,14 +135,21 @@ class _RecipesPageState extends State<RecipesPage> {
             !recipe.name.toLowerCase().startsWith(searchText))
         .toList();
 
-    List<Recipe> prioritizedResults = [
-      ...startsWithSearchText,
-      ...containsSearchText
-    ];
+    List<Recipe> prioritizedResults = _isTagSearch
+        ? filtered
+        : [...startsWithSearchText, ...containsSearchText];
 
+    // Update the UI
     setState(() {
-      _filteredRecipes = prioritizedResults;
+      _filteredRecipes =
+          _searchController.text.isNotEmpty ? prioritizedResults : filtered;
     });
+
+    print("Updated UI with ${_filteredRecipes.length} recipes");
+    print("----- END FILTERING -----");
+
+    // Reset
+    _isTagSearch = false;
   }
 
   void _applyFilters() {
@@ -286,11 +337,15 @@ class _RecipesPageState extends State<RecipesPage> {
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) {
-                  _filterRecipes();
+                  if (value.isEmpty) {
+                    _filterRecipes();
+                  } else {
+                    _filterRecipes();
+                  }
                 },
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  hintText: "Search recipes...",
+                  hintText: "Search by Recipe Name or Tag...",
                   icon: Icon(Icons.search),
                 ),
               ),
@@ -525,6 +580,7 @@ class Recipe {
   final String image;
   final String difficulty;
   final String flag;
+  final List<String>? Tags;
 
   Recipe({
     required this.id,
@@ -532,24 +588,36 @@ class Recipe {
     required this.image,
     required this.difficulty,
     required this.flag,
+    this.Tags,
   });
 
   factory Recipe.fromFirestore(QueryDocumentSnapshot doc, String collection) {
     final data = doc.data() as Map<String, dynamic>;
 
+    print("Fetching Recipe: ${data['Title']}");
+    print("Tags from Firestore: ${data['Tags']}");
+
     // Safely handle the 'image' field
     String image = '';
     if (data['image'] is String) {
-      image = data['image']; // Single image URL as a string
+      image = data['image'];
     } else if (data['image'] is List<dynamic> && data['image'].isNotEmpty) {
-      image = data['image'][0]; // First image from the list
+      image = data['image'][0];
     }
+
+    // Safely read the Tags array
+    List<String>? tags;
+    if (data['Tags'] is List) {
+      tags = (data['Tags'] as List).map((tag) => tag.toString()).toList();
+    }
+
     return Recipe(
       id: doc.id,
       name: data['name'] ?? '',
       image: image,
       difficulty: data['difficulty'] ?? data['difficult'] ?? '',
       flag: collection == 'recipes' ? 'recipes' : 'users_recipes',
+      Tags: tags,
     );
   }
 }

@@ -28,7 +28,7 @@ def import_csv_to_firestore(csv_file_path, collection_name):
         print(f"Document added with data: {record}")
 
 # Path to your CSV file
-csv_file_path = "/Users/saraabdullah/Desktop/output.csv"
+csv_file_path = "/Users/saraabdullah/Desktop/Outputset.csv"
   # Replace with the actual path to your CSV file
 
 # Call the function to import data

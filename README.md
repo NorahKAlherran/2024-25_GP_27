@@ -4,10 +4,12 @@ QOOT
 As more people become health-conscious, there's a growing shift toward preparing home-cooked meals rather than relying on takeout. However, many users face challenges when it comes to deciding what to cook based on the ingredients they already have, often leading to unnecessary food waste and frustration.
 QOOT is designed to solve this problem through a user-friendly mobile application that helps users discover recipes based on the ingredients available in their kitchen. The app encourages healthier eating habits, reduces waste, saves time, and simplifies the cooking process. It aims to make home cooking more accessible, cost-effective, and enjoyable—supporting users in leading healthier, more sustainable lifestyles.
 
-2. Technologies Used
-Flutter: Cross-platform mobile development framework used to build the Android application.
-Firebase: Backend service used for real-time database storage, authentication, and image hosting.
-Python: Used for backend data preprocessing tasks.
+2.	Technologies Used
+•	Flutter: Used to build the cross-platform mobile application, providing a consistent UI and smooth performance on Android devices.
+•	Firebase: Handles backend services such as authentication, Firestore database storage, image hosting via Firebase Storage, and real-time updates.
+•	Python: Powers backend scripts and data preprocessing tasks, including support for AI-driven features.
+•	OpenAI API (ChatGPT): Integrated to enable intelligent features like ingredient substitution, recipe translation, tag generation, and personalized recipe suggestions.
+
 
 3. Launching Instructions
 To run the QOOT application:
@@ -21,3 +23,11 @@ adb install app-release.apk
 
 -On a PC using BlueStacks:
 Open BlueStacks and drag the app-release.apk file into the application window. The app will install automatically and appear on the BlueStacks home screen.
+
+4.	Login Credentials
+username : sarah
+password : 12345678A@
+
+username : noraha
+password : N1234567@
+

@@ -25,6 +25,7 @@ adb install app-release.apk
 Open BlueStacks and drag the app-release.apk file into the application window. The app will install automatically and appear on the BlueStacks home screen.
 
 4.	Login Credentials
+   
 username : sarah
 
 password : 12345678A@

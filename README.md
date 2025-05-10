@@ -26,8 +26,10 @@ Open BlueStacks and drag the app-release.apk file into the application window. T
 
 4.	Login Credentials
 username : sarah
+
 password : 12345678A@
 
 username : noraha
+
 password : N1234567@
 
